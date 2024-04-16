@@ -1,0 +1,13 @@
+# dumb files
+*.DS_Store
+~*
+@*
+
+# stim & videos
+/stim
+/videos
+/videos-processed
+
+# large data files
+*.csv.gz
+*~*
