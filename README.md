@@ -17,19 +17,19 @@ You can find the following here:
 
 ## Anatomy of the repo
 
-To render the paper, run the code in `/writing/manuscript.Rmd`. Running this script will generate the manuscript from saved outputs of analysis and visualization scripts. To run everything from the raw data (which can take a while to process), first start by running `/analysis/builder.R`, then `analysis.R`.
+To render the paper, run the code in `/writing/MIPH_childdev.Rmd`. Running this script will generate the manuscript from saved outputs of the analysis script. To run everything from the cleaned data, run `analysis.R`.
 
 ## Data and analysis code
 
-All raw data files are in `/data`. Identifiable information have been removed.
+All data files are in `/data`. Identifiable information have been removed.
 
-Scripts for preprocessing the data are in `/analysis`.
+Analysis scripts are in `/analysis`.
 
-Preprocessed data, interim datasets and the like are in `/results`.
+Analysis results, interim datasets and the like are in `/results`.
 
 ### Visualisations
 
-Visualisation code is in `/viz`, along with images and static data used for non-dynamic visualisations.
+Images and static data used for non-dynamic visualisations are in `/viz`.
 
 ### Materials
 

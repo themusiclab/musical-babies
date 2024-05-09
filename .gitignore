@@ -11,3 +11,4 @@
 # large data files
 *.csv.gz
 *~*
+.Rproj.user
