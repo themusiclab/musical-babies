@@ -15,6 +15,8 @@ You can find the following here:
 
 **For assistance, please contact the corresponding authors: Eun Cho ([eun.cho@yale.edu](mailto:eun.cho@yale.edu)), Lidya Yurdum ([lidya.yurdum@yale.edu](mailto:lidya.yurdum@yale.edu)) and Samuel Mehr ([mehr@hey.com](mailto:mehr@hey.com)).**
 
+To set the working directory, open `musical-babies.Rproj`. All analysis scripts should be run from within this project.
+
 ## Anatomy of the repo
 
 To render the paper, run the code in `/writing/MIPH_childdev.Rmd`. Running this script will generate the manuscript from saved outputs of the analysis script. To run everything from the cleaned data, run `analysis.R`.
