@@ -2,7 +2,8 @@
 
 This repo contains all files necessary for reproducing the article "Ecological momentary assessment reveals causal effects of music enrichment on infant mood" by Cho & Yurdum et al. 
 
-**This repository is currently under construction. We will remove this warning when the repository is fully populated.**
+> [!Warning]
+> **This repository is currently under construction and is not yet complete. It'll be populated soon and we will remove this warning once sorted.**
 
 ## Description
 
@@ -13,7 +14,7 @@ You can find the following here:
 - intervention materials 
 - supplementary data and materials
 
-**For assistance, please contact the corresponding authors: Eun Cho ([eun.cho@yale.edu](mailto:eun.cho@yale.edu)), Lidya Yurdum ([lidya.yurdum@yale.edu](mailto:lidya.yurdum@yale.edu)) and Samuel Mehr ([mehr@hey.com](mailto:mehr@hey.com)).**
+**For assistance, please contact the corresponding authors: Eun Cho ([eun.cho@yale.edu](mailto:eun.cho@yale.edu)), Lidya Yurdum ([lidya.yurdum@yale.edu](mailto:lidya.yurdum@yale.edu)) and Samuel Mehr ([sam@auckland.ac.nz](mailto:sam@auckland.ac.nz)).**
 
 To set the working directory, open `musical-babies.Rproj`. All analysis scripts should be run from within this project.
 
