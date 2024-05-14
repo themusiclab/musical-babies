@@ -28,12 +28,12 @@ All data files are in `/data`. Identifiable information have been removed.
 
 Analysis scripts are in `/analysis`.
 
-Analysis results, interim datasets and the like are in `/results`.
+Analysis results are in `/results`.
 
 ### Visualisations
 
-Images and static data used for non-dynamic visualisations are in `/viz`.
+Images used for non-dynamic visualisations are in `/viz`.
 
 ### Materials
 
-Intervention materials are in `/materials`, and include video karaoke files provided to parents to aid in the singing intervention.
+Intervention materials (i.e., video karaoke files provided to parents to aid in the singing intervention) are in `/materials`.

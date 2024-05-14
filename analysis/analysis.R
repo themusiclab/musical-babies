@@ -129,13 +129,13 @@ ids <- dat$miph_id %>%
   unique
 
 # mean number of pings answered
-mean_pings <- dat %>% 
+median_pings <- dat %>% 
   group_by(miph_id) %>% 
   mutate(n=n()) %>% 
   dplyr::select(miph_id, n) %>% 
   distinct() %>% 
   pull(n) %>% 
-  mean()
+  median()
 
 #### create combined demographic dataset "demo" ----
 
@@ -150,9 +150,7 @@ miph_demo <- read_csv(here("data","clean_survey_data.csv" )) %>%
          # make numberChildren numeric
          numberChildren = ifelse(numberChildren == "5 or more", 
                                  5, 
-                                 as.numeric(numberChildren))) %>% 
-  # one participant has two identical entries, drop one
-  filter(!(miph_id == "MIPH-2056" & baby == "Vicky"))
+                                 as.numeric(numberChildren))) 
 
 kiwi_demo <- read_csv(here("data","clean_survey_data_kiwi.csv" )) %>% 
   filter(miph_id %in% ids) %>% # exclude low responders
@@ -281,7 +279,7 @@ country_table <- demo %>%
   mutate(total = n()) %>% 
   group_by(currentCountry, birthCountry) %>% 
   summarise(n = n(),
-            p = ((n/total)*100) %>% r0) %>% 
+            p = ((n/total)*100) %>% round(.,1)) %>% 
   # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
   ungroup() %>% 
   dplyr::select(currentCountry, birthCountry,n,p) %>% 
@@ -293,7 +291,7 @@ currentcountry_table <- demo %>%
          characteristic = "Country of residence") %>% 
   group_by(characteristic,currentCountry) %>% 
   summarise(n = n(),
-            p = ((n/total)*100) %>% r0) %>% 
+            p = ((n/total)*100) %>% round(.,1)) %>% 
   # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
   ungroup() %>% 
   dplyr::select(characteristic, value = currentCountry,n,p) %>% 
@@ -305,7 +303,7 @@ birthcountry_table <- demo %>%
          characteristic = "Parent's country of birth") %>% 
   group_by(characteristic, birthCountry) %>% 
   summarise(n = n(),
-            p = ((n/total)*100) %>% r0) %>% 
+            p = ((n/total)*100) %>% round(.,1)) %>% 
   # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
   ungroup() %>% 
   dplyr::select(characteristic, value = birthCountry,n,p) %>% 
@@ -321,7 +319,7 @@ race_table <- demo %>%
                            TRUE ~ parentRace)) %>% 
   group_by(characteristic,value) %>% 
   summarise(n = sum(freq),
-            p = ((n/total)*100) %>% r0) %>% distinct() %>% 
+            p = ((n/total)*100) %>% round(.,1)) %>% distinct() %>% 
   mutate(value = factor(value, 
                         levels= c("White/European/New Zealand European",
                                   "Asian",
@@ -349,7 +347,7 @@ education_table <- demo %>%
   characteristic = "Parent's highest level of education") %>% 
   group_by(characteristic, parentEducation) %>% 
   summarise(n = n(),
-            p = ((n/total)*100) %>% r0) %>% 
+            p = ((n/total)*100) %>% round(.,1)) %>% 
   ungroup() %>% 
   dplyr::select(characteristic, value= parentEducation,n,p) %>% 
   distinct() %>% 
@@ -378,7 +376,7 @@ income_table <- demo %>%
          characteristic = "Current household income (USD)") %>% 
   group_by(characteristic, parentIncome_recoded) %>% 
   reframe(n = n(),
-          p = ((n/total)*100) %>% r0) %>% 
+          p = ((n/total)*100) %>% round(.,1)) %>% 
   ungroup() %>% 
   dplyr::select(characteristic, value = parentIncome_recoded,n,p) %>% 
   distinct() %>% 
@@ -495,9 +493,9 @@ singing_analyses <- list()
 sing_check_dat <-dat %>% 
   filter(EMA_wereYouWithBaby == "Yes" & EMA_sickBaby == "No") %>% 
   group_by(cohort, condition, miph_id, week) %>% 
-  summarise(sangPercentage = mean(EMA_sungToBabyLastHour == "Yes", na.rm = TRUE) * 100,
-            musicForSelfPercentage = mean(EMA_musicForOwnEnjoyment == "Yes", na.rm = TRUE) * 100,
-            musicRecordedPercentage = mean(EMA_playedRecordedMusic == "Yes", na.rm = TRUE) * 100) %>% 
+  summarise(sangPercentage = mean(EMA_sungToBabyLastHour == "Yes", na.rm = TRUE),
+            musicForSelfPercentage = mean(EMA_musicForOwnEnjoyment == "Yes", na.rm = TRUE),
+            musicRecordedPercentage = mean(EMA_playedRecordedMusic == "Yes", na.rm = TRUE)) %>% 
   pivot_wider(id_cols = c("condition","miph_id","cohort"), names_from = week, values_from = c(sangPercentage, musicForSelfPercentage,musicRecordedPercentage))
 
 # compare conditions 
@@ -648,8 +646,7 @@ soothing_method_dat_long %>%
 soothing_plot1_data <- soothing_method_dat %>% 
   filter(condition == "SingFirst" & week <= 6) %>%
   filter(method %in% c("Rub.or.pat", "Sing","Feed","Bounce.rock.walk.swing", "Shush.white.noise","Play.recorded.music")) %>% 
-  mutate(proportion = proportion * 100,
-         method = case_when( method == "Rub.or.pat" ~ "Rub or pat",
+  mutate(method = case_when( method == "Rub.or.pat" ~ "Rub or pat",
                              method == "Bounce.rock.walk.swing" ~ "Bounce/Rock/Walk/Swing",
                              method == "Shush.white.noise" ~ "Shush or use white noise",
                              method == "Play.recorded.music" ~ "Play recorded music",
@@ -661,7 +658,7 @@ soothing_plot2_data <- soothing_method_dat_long %>%
                            week %in% c(2:5) ~ "Intervention \n(avg.)",
                            week == 6 ~ "Post-test\n"),
          phase = factor(phase, levels = c("Pre-test\n", "Intervention \n(avg.)", "Post-test\n")),
-         EMA_babyHowCalmDown.Sing = EMA_babyHowCalmDown.Sing*100) %>%
+         EMA_babyHowCalmDown.Sing = EMA_babyHowCalmDown.Sing) %>%
   dplyr::select(miph_id,condition, phase, EMA_babyHowCalmDown.Sing) %>% 
   group_by(condition, phase) %>% 
   summarise(mean = mean(EMA_babyHowCalmDown.Sing, na.rm = TRUE),
