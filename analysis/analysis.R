@@ -12,10 +12,12 @@ p_load(
   kableExtra,
   broom.mixed,
   see,
-  blandr
+  blandr,
+  boot,
+  boot.pval
 )
 
-#### Convenience functions (mostly used in reporting in the .rmd) and fancy violing plot function -----
+#### Convenience functions (mostly used in reporting in the .rmd) -----
 
 # rounds to 2 or 3 decimal places
 r2 <- function(num) {format(round(num, 2), nsmall = 2)}
@@ -23,7 +25,8 @@ r0 <- function(num) {format(round(num, 0), nsmall = 2)}
 # formats to percentage
 p <- function(num) {paste0((100*(num)) %>% r2, "%")}
 
-# fancy split violin plot code
+#### fancy split violin plot code ----
+
 GeomSplitViolin <- ggplot2::ggproto(
   "GeomSplitViolin",
   ggplot2::GeomViolin,
@@ -121,6 +124,7 @@ exclusions <- dat_full %>%
   pull(miph_id) %>% 
   unique
 
+
 # "dat" has low responders removed (final sample)
 dat <- dat_full %>% 
   filter(!(miph_id %in% exclusions))
@@ -137,10 +141,11 @@ median_pings <- dat %>%
   pull(n) %>% 
   median()
 
+
+
 #### create combined demographic dataset "demo" ----
 
 miph_demo <- read_csv(here("data","clean_survey_data.csv" )) %>% 
-  filter(miph_id %in% ids) %>% # exclude low responders
   dplyr::select(miph_id:condition, demoStartDate:parentingSure) %>% 
   distinct() %>% 
   # make currentcountry = birthcountry if participant still lives where they were born
@@ -153,7 +158,6 @@ miph_demo <- read_csv(here("data","clean_survey_data.csv" )) %>%
                                  as.numeric(numberChildren))) 
 
 kiwi_demo <- read_csv(here("data","clean_survey_data_kiwi.csv" )) %>% 
-  filter(miph_id %in% ids) %>% # exclude low responders
   dplyr::select(miph_id, name=parentName, baby=babyName, condition, babyBirthday:parentingSure) %>% 
   distinct() %>% 
   mutate(currentCountry = ifelse(is.na(currentCountry), 
@@ -161,13 +165,74 @@ kiwi_demo <- read_csv(here("data","clean_survey_data_kiwi.csv" )) %>%
                                  currentCountry)) %>% 
   mutate(miph_id = as.character(miph_id))
 
-demo <- bind_rows("miph" = miph_demo, "kiwi" = kiwi_demo, .id = "cohort") %>% 
+
+demo_full <- bind_rows("miph" = miph_demo, "kiwi" = kiwi_demo, .id = "cohort") %>% 
   # merge in study start date from ema data
   left_join(dat[,c("miph_id","startDate")] , by = "miph_id") %>%  
   # calculate age at start of study in days
   mutate(age_at_start = as.numeric(startDate - babyBirthday),
          age_at_start_months = age_at_start / 30) %>% 
-  distinct()
+  distinct() %>% 
+  mutate(ppd1 = recode(ppd1, 
+                       "As much as I always could" = 0,
+                       "Not quite so much now" = 1,
+                       "Definitely not so much now" = 2,
+                       "Not at all" = 3),
+         ppd2 = recode(ppd2, 
+                       "As much as I ever did" = 0,
+                       "Rather less than I used to" = 1,
+                       "Definitely less than I used to" = 2,
+                       "Hardly at all" = 3),
+         ppd3 = recode(ppd3, 
+                       "Yes, most of the time" = 3,
+                       "Yes, some of the time" = 2,
+                       "Not very often" = 1,
+                       "No, never" = 0),
+         ppd4 = recode(ppd4, 
+                       "No, not at all" = 0,
+                       "Hardly ever" = 1,
+                       "Yes, sometimes" = 2,
+                       "Yes, very often" = 3),
+         ppd5 = recode(ppd5, 
+                       "No, not at all" = 0,
+                       "No, not much" = 1,
+                       "Yes, sometimes" = 2,
+                       "Yes, quite a lot" = 3),
+         ppd6 = recode(ppd6, 
+                       "No, have been coping as well as ever" = 0,
+                       "No, most of the time I have coped quite well" = 1,
+                       "Yes, sometimes I haven’t been coping as well as usual" = 2,
+                       "Yes, most of the time I haven’t been able to cope at all" = 3),
+         ppd7 = recode(ppd7, 
+                       "No, not at all" = 0,
+                       "Not very often" = 1,
+                       "Yes, sometimes" = 2,
+                       "Yes, most of the time" = 3),
+         ppd8 = recode(ppd8, 
+                       "No, not at all" = 0,
+                       "Not very often" = 1,
+                       "Yes, quite often" = 2,
+                       "Yes, most of the time" = 3),
+         ppd9 = recode(ppd9, 
+                       "No, never" = 0,
+                       "Only occasionally" = 1,
+                       "Yes, quite often" = 2,
+                       "Yes, most of the time" = 3),
+         ppd10 = recode(ppd10, 
+                        "No, not at all" = 0,
+                        "No, not much" = 1,
+                        "Yes, sometimes" = 2,
+                        "Yes, quite often" = 3),
+         epds = rowSums(across(starts_with("ppd")), na.rm = TRUE),
+         # Grouping for high and low on EPDS (cut-off = 11)
+         epds_group = ifelse(epds >= 10, "high", "low"))
+
+demo <- demo_full %>% 
+  filter(miph_id %in% ids) # exclude low responders
+  
+excluded_demo <- demo_full %>% 
+  filter(!(miph_id %in% ids)) %>%   # excluded ppl only
+  drop_na(babySex) # drop rows where we have no demo data
 
 #### create combined repeated measures survey dataset "survey" ----
 
@@ -263,6 +328,10 @@ demographics[["miph"]][["babySex"]] <- demo[demo$cohort=="miph",]$babySex %>% ta
 demographics[["kiwi"]][["babySex"]] <- demo[demo$cohort=="kiwi",]$babySex %>% table
 demographics[["total"]][["babySex"]] <- demo$babySex %>% table
 
+
+# first child?
+demographics[["total"]][["babyFirst"]] <- demo$firstChildBinary %>% table
+demo$numberChildren %>% table
 
 # how many babies were born preterm?
 demographics[["miph"]][["preterm"]] <- demo[demo$cohort=="miph",]$babyDuedate %>% table
@@ -382,11 +451,163 @@ income_table <- demo %>%
   distinct() %>% 
   arrange(value) 
 
+child_num_table <- demo %>% 
+  mutate(child_num = case_when(firstChildBinary != "Yes" ~ numberChildren + 1,
+                               firstChildBinary == "Yes" ~ 1)) %>% 
+  mutate(child_num_recoded = case_when(child_num>=4 ~ "4 or more",
+                                       TRUE ~ as.character(child_num)),
+         total = n(),
+         characteristic = "Number of Children") %>% 
+  group_by(characteristic, child_num_recoded) %>% 
+  reframe(n = n(),
+          p = ((n/total)*100) %>% round(.,1)) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value = child_num_recoded,n,p) %>% 
+  distinct() %>% 
+  arrange(value) 
+  
+
 table1 <- bind_rows(currentcountry_table, 
                     birthcountry_table,
                     race_table,
                     education_table,
-                    income_table)
+                    income_table,
+                    child_num_table)
+
+#### data for table: excluded participant demographics ----
+
+excluded_demo <- excluded_demo %>% 
+  filter(!is.na(babyBirthday))
+  
+country_table_ex <- excluded_demo %>% 
+  mutate(total = n()) %>% 
+  group_by(currentCountry, birthCountry) %>% 
+  summarise(n = n(),
+            p = ((n/total)*100) %>% round(.,1)) %>% 
+  # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
+  ungroup() %>% 
+  dplyr::select(currentCountry, birthCountry,n,p) %>% 
+  distinct() %>% 
+  arrange(currentCountry, desc(n)) 
+
+currentcountry_table_ex <- excluded_demo %>% 
+  mutate(total = n(),
+         characteristic = "Country of residence") %>% 
+  group_by(characteristic,currentCountry) %>% 
+  summarise(n = n(),
+            p = ((n/total)*100) %>% round(.,1)) %>% 
+  # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value = currentCountry,n,p) %>% 
+  distinct() %>% 
+  arrange(desc(n)) 
+
+birthcountry_table_ex <- excluded_demo %>% 
+  mutate(total = n(),
+         characteristic = "Parent's country of birth") %>% 
+  group_by(characteristic, birthCountry) %>% 
+  summarise(n = n(),
+            p = ((n/total)*100) %>% round(.,1)) %>% 
+  # mutate(`Recruitment Wave`= ifelse(cohort == "miph","First", "Second")) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value = birthCountry,n,p) %>% 
+  distinct() %>% 
+  arrange(desc(n)) 
+
+race_table_ex <- excluded_demo %>% 
+  mutate(total = n(),
+         characteristic = "Parent race/ethnicity") %>% 
+  group_by(parentRace,characteristic, total) %>% 
+  summarise(freq = n()) %>% 
+  mutate(value = case_when(parentRace %in% c("White", "European/NZ European") ~ "White/European/New Zealand European",
+                           TRUE ~ parentRace)) %>% 
+  group_by(characteristic,value) %>% 
+  summarise(n = sum(freq),
+            p = ((n/total)*100) %>% round(.,1)) %>% distinct() %>% 
+  mutate(value = factor(value, 
+                        levels= c("White/European/New Zealand European",
+                                  "Asian",
+                                  "Black or African American",
+                                  "Māori",
+                                  "More than one race",
+                                  "I'd prefer not to say"))) %>% 
+  arrange(value) %>% 
+  dplyr::select(characteristic, value, n, p)
+
+
+education_table_ex <- excluded_demo %>% 
+  mutate(parentEducation = case_when(parentEducation=="Some college/university (still studying or dropped out)" ~ "Some college/university",
+                                     parentEducation=="College/university graduate (4 year)" ~ "College/university graduate",
+                                     TRUE ~ parentEducation
+  ),
+  parentEducation = factor(parentEducation, levels = c("High school or equivalent",
+                                                       "Vocational/technical school (2 year)",
+                                                       "Some college/university",
+                                                       "College/university graduate",
+                                                       "Master's degree (MA or equivalent)",
+                                                       "Doctoral degree (PhD or equivalent)",
+                                                       "Professional degree (MD, JD, etc)")),
+  total = n(),
+  characteristic = "Parent's highest level of education") %>% 
+  group_by(characteristic, parentEducation) %>% 
+  summarise(n = n(),
+            p = ((n/total)*100) %>% round(.,1)) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value= parentEducation,n,p) %>% 
+  distinct() %>% 
+  arrange(value) 
+
+# simplified income table (full version below)
+income_table_ex <- excluded_demo %>% 
+  mutate(parentIncome = case_when(cohort == "kiwi" &  parentIncome=="$40,000 to $49,999" ~ "$20,000 to $29,999",
+                                  cohort == "kiwi" &  parentIncome=="$50,000 to $74,999" ~ "$30,000 to $39,999",
+                                  cohort == "kiwi" &  parentIncome=="$75,000 to $99,999" ~ "$50,000 to $74,999",
+                                  cohort == "kiwi" &  parentIncome=="$100,000 to $150,000" ~ "$75,000 to $99,999",
+                                  cohort == "kiwi" &  parentIncome=="Over $150,000" ~ "$100,000 to $150,000",
+                                  TRUE ~ parentIncome),
+         parentIncome_recoded = case_when(parentIncome %in% c("$40,000 to $49,999",
+                                                              "$30,000 to $39,999",
+                                                              "$20,000 to $29,999",
+                                                              "Under $10,000") ~ "Below $50,000",
+                                          TRUE ~ parentIncome),
+         parentIncome_recoded = factor(parentIncome_recoded, levels= c("Over $150,000",
+                                                                       "$100,000 to $150,000" ,
+                                                                       "$75,000 to $99,999",
+                                                                       "$50,000 to $74,999",
+                                                                       "Below $50,000",
+                                                                       "I'd prefer not to say")), 
+         total = n(),
+         characteristic = "Current household income (USD)") %>% 
+  group_by(characteristic, parentIncome_recoded) %>% 
+  reframe(n = n(),
+          p = ((n/total)*100) %>% round(.,1)) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value = parentIncome_recoded,n,p) %>% 
+  distinct() %>% 
+  arrange(value) 
+
+child_num_table_ex <- excluded_demo %>% 
+  mutate(child_num = case_when(firstChildBinary != "Yes" ~ numberChildren + 1,
+                               firstChildBinary == "Yes" ~ 1)) %>% 
+  mutate(child_num_recoded = case_when(child_num>=4 ~ "4 or more",
+                                       TRUE ~ as.character(child_num)),
+         total = n(),
+         characteristic = "Number of Children") %>% 
+  group_by(characteristic, child_num_recoded) %>% 
+  reframe(n = n(),
+          p = ((n/total)*100) %>% round(.,1)) %>% 
+  ungroup() %>% 
+  dplyr::select(characteristic, value = child_num_recoded,n,p) %>% 
+  distinct() %>% 
+  arrange(value) 
+
+
+table_demo_ex <- bind_rows(currentcountry_table_ex, 
+                    birthcountry_table_ex,
+                    race_table_ex,
+                    education_table_ex,
+                    income_table_ex,
+                    child_num_table_ex)
 
 
 #### data for table: musical background ----
@@ -427,7 +648,7 @@ simple_music_table <- demo %>%
   dplyr::select(miph_id, bg ) %>% 
   group_by(bg) %>% 
   summarise(n = n(),
-            p = ((n/110)*100) %>% r0)
+            p = ((n/110)*100) %>% round(.,1))
   
          
 #### data for table: EMA studies with parent-infant dyads ------
@@ -457,8 +678,7 @@ cohort_compare <- list()
 
 # compare infant age at start of study in two cohorts
 cohort_compare[["age"]] <- wilcox.test(age_at_start ~ cohort, 
-                                       data = demo, 
-                                       paired = F) %>% broom::tidy()
+                                       data = demo) %>% broom::tidy()
 
 
 # data with compliance rates by study phase 
@@ -473,24 +693,71 @@ compliance_by_group_dat <- dat %>%
 # data with compliance rates across whole study
 compliance_total_dat <- dat %>%
   left_join(demo, by=c("miph_id","cohort","condition")) %>% 
-  dplyr::select(miph_id, cohort,condition,  total_percentage_answered,age_at_start) %>% 
-  distinct() 
+  dplyr::select(miph_id, cohort,condition,  total_percentage_answered,age_at_start,firstChildBinary,numberChildren,parentIncome,epds,epds_group) %>% 
+  distinct() %>% 
+  mutate(numberChildren = case_when(firstChildBinary == "Yes" ~ 0,
+                                    TRUE ~ numberChildren),
+         income_recoded = case_when(parentIncome == "Under $10,000" ~ 1,
+                                    parentIncome == "$20,000 to $29,999" ~ 3,
+                                    parentIncome == "$40,000 to $49,999" ~ 5,
+                                    parentIncome == "$50,000 to $74,999" ~ 6,
+                                    parentIncome == "$75,000 to $99,999" ~ 7,
+                                    parentIncome == "$100,000 to $150,000" ~ 8,
+                                    parentIncome == "Over $150,000" ~ 9,
+                                    TRUE ~ NA
+                                    ))
 
-# compliance was not related to infant age at the start of the study
-cohort_compare[["compliance_by_age"]] <- lm(total_percentage_answered~age_at_start, compliance_total_dat) %>% tidy
+# bootstrap function to handle non-normality
+n_bootstraps <- 1000
 
-cohort_compare[["compliance_by_condition"]] <- lm(total_percentage_answered~condition, compliance_total_dat) %>% tidy
-cohort_compare[["compliance_by_condition_pretest"]] <- lm(phaseCompletionRate~condition, compliance_by_group_dat %>% filter(studyPhase == 1)) %>% tidy
-cohort_compare[["compliance_by_condition_intervention"]] <- lm(phaseCompletionRate~condition, compliance_by_group_dat %>% filter(studyPhase == 2)) %>% tidy
-cohort_compare[["compliance_by_condition_posttest"]] <- lm(phaseCompletionRate~condition, compliance_by_group_dat %>% filter(studyPhase == 3)) %>% tidy
-cohort_compare[["compliance_by_condition_7-10"]] <- lm(phaseCompletionRate~condition, compliance_by_group_dat %>% filter(studyPhase == 4)) %>% tidy
+boot_fun_fun_fun <- function(outcome, predictor) {
+  function(data, indices) {
+    m <- reformulate(predictor, response = outcome)
+    fit <- lm(m, data = data[indices, ])
+    return(coef(fit))
+  }
+}
+
+run_bootstrap_model_and_add_pValue <- function(data, outcome, predictor, n_bootstraps = 1000) {
+  boot_results <- boot(
+    data = data, 
+    statistic = boot_fun_fun_fun(outcome, predictor),
+    R = n_bootstraps
+  )
+  
+  tidy_results <- tidy(boot_results)
+  
+  pvals <- sapply(1:ncol(boot_results$t), function(i) {
+    boot.pval(boot_results, index = i)
+  })
+  
+  tidy_results$p.value <- pvals
+  
+  return(tidy_results)
+}
+
+# compliance was not related to infant age, income, edps scores or number of siblings 
+cohort_compare[["compliance_by_age"]] <- run_bootstrap_model_and_add_pValue(compliance_total_dat, "total_percentage_answered", "age_at_start", n_bootstraps)
+cohort_compare[["compliance_by_income"]] <- run_bootstrap_model_and_add_pValue(compliance_total_dat, "total_percentage_answered", "income_recoded", n_bootstraps)
+cohort_compare[["compliance_by_epds"]] <- run_bootstrap_model_and_add_pValue(compliance_total_dat, "total_percentage_answered", "epds_group", n_bootstraps)
+#cohort_compare[["compliance_by_sibling"]] <- wilcox.test(total_percentage_answered ~ firstChildBinary, compliance_total_dat) %>% tidy
+cohort_compare[["compliance_by_sibling_num"]] <- run_bootstrap_model_and_add_pValue(compliance_total_dat, "total_percentage_answered", "numberChildren", n_bootstraps)
+  
+
+cohort_compare[["compliance_by_condition"]] <- run_bootstrap_model_and_add_pValue(compliance_total_dat, "total_percentage_answered", "condition", n_bootstraps)
+cohort_compare[["compliance_by_condition_pretest"]] <- run_bootstrap_model_and_add_pValue(compliance_by_group_dat %>% filter(studyPhase == 1), "phaseCompletionRate", "condition", n_bootstraps)
+cohort_compare[["compliance_by_condition_intervention"]] <- run_bootstrap_model_and_add_pValue(compliance_by_group_dat %>% filter(studyPhase == 2), "phaseCompletionRate", "condition", n_bootstraps)
+cohort_compare[["compliance_by_condition_posttest"]] <- run_bootstrap_model_and_add_pValue(compliance_by_group_dat %>% filter(studyPhase == 3), "phaseCompletionRate", "condition", n_bootstraps)
+cohort_compare[["compliance_by_condition_7-10"]] <- run_bootstrap_model_and_add_pValue(compliance_by_group_dat %>% filter(studyPhase == 4), "phaseCompletionRate", "condition", n_bootstraps)
+
+
 
 #### singing frequency analyses ----
 
 singing_analyses <- list()
 
 # data with weekly proportion of times participant reported having sung/played music/etc in last 2-3 hours
-sing_check_dat <-dat %>% 
+sing_check_dat <- dat %>% 
   filter(EMA_wereYouWithBaby == "Yes" & EMA_sickBaby == "No") %>% 
   group_by(cohort, condition, miph_id, week) %>% 
   summarise(sangPercentage = mean(EMA_sungToBabyLastHour == "Yes", na.rm = TRUE),
@@ -499,14 +766,12 @@ sing_check_dat <-dat %>%
   pivot_wider(id_cols = c("condition","miph_id","cohort"), names_from = week, values_from = c(sangPercentage, musicForSelfPercentage,musicRecordedPercentage))
 
 # compare conditions 
-singing_analyses[["hourly_singing_check"]][["compare_conditions_pretest"]] <- t.test(sing_check_dat[sing_check_dat$condition == "SingFirst",]$sangPercentage_1, 
-                                                                                     sing_check_dat[sing_check_dat$condition == "SingSecond",]$sangPercentage_1, 
-                                                                                     paired = F) %>% tidy()
+singing_analyses[["hourly_singing_check"]][["compare_conditions_pretest"]] <- wilcox.test(sing_check_dat[sing_check_dat$condition == "SingFirst",]$sangPercentage_1, 
+                                                                                          sing_check_dat[sing_check_dat$condition == "SingSecond",]$sangPercentage_1) %>% tidy()
 
-singing_analyses[["hourly_singing_check"]][["compare_conditions_posttest"]] <- t.test(sing_check_dat[sing_check_dat$condition == "SingFirst",]$sangPercentage_6, 
-                                                                                     sing_check_dat[sing_check_dat$condition == "SingSecond",]$sangPercentage_6, 
-                                                                                     paired = F) %>% tidy()
 
+singing_analyses[["hourly_singing_check"]][["compare_conditions_posttest"]] <- wilcox.test(sing_check_dat[sing_check_dat$condition == "SingFirst",]$sangPercentage_6, 
+                                                                                           sing_check_dat[sing_check_dat$condition == "SingSecond",]$sangPercentage_6) %>% tidy()
 
 sing_check_dat_long <- dat %>% 
   filter(week <= 6) %>% 
@@ -517,6 +782,7 @@ sing_check_dat_long <- dat %>%
             musicRecordedPercentage = mean(EMA_playedRecordedMusic == "Yes", na.rm = TRUE) * 100) %>% 
   mutate(condition = factor(condition, 
                             levels=c("SingSecond","SingFirst")))
+
 singing_analyses[["hourly_singing_check"]][["autoregression"]] <- lme(sangPercentage ~ 1 + condition*daynumber,
                                                                           random = ~1|miph_id,
                                                                           correlation = corAR1(form = ~ daynumber|miph_id),
@@ -546,6 +812,14 @@ for (condition in c("SingFirst","SingSecond")) {
   }
 }
 
+singing_analyses[["base_rates"]][["singing"]][["mean"]] <- sing_check_dat[["sangPercentage_1"]] %>% mean(na.rm=T)
+singing_analyses[["base_rates"]][["singing"]][["sd"]] <- sing_check_dat[["sangPercentage_1"]] %>% sd(na.rm=T)
+singing_analyses[["base_rates"]][["musicForSelf"]][["mean"]] <- sing_check_dat[["musicForSelfPercentage_1"]] %>% mean(na.rm=T)
+singing_analyses[["base_rates"]][["musicForSelf"]][["sd"]] <- sing_check_dat[["musicForSelfPercentage_1"]] %>% sd(na.rm=T)
+singing_analyses[["base_rates"]][["musicRecorded"]][["mean"]] <- sing_check_dat[["musicRecordedPercentage_1"]] %>% mean(na.rm=T)
+singing_analyses[["base_rates"]][["musicRecorded"]][["sd"]] <- sing_check_dat[["musicRecordedPercentage_1"]] %>% sd(na.rm=T)
+
+# calculate mean percentage of having sung in past 2-3 hours for each week
 
 # data with weekly average of singing frequency
 sing_freq_dat <-  dat %>% 
@@ -579,14 +853,14 @@ for (condition in c("SingFirst","SingSecond", "total")) {
 
 # compare weekly singing frequency between conditions
 
-singing_analyses[["singing_freq"]][["compare_conditions_pretest"]] <- t.test(sing_freq_dat[sing_freq_dat$condition == "SingFirst",]$`1`, 
-                                                                             sing_freq_dat[sing_freq_dat$condition == "SingSecond",]$`1`, 
-                                                                             paired = F)
+singing_analyses[["singing_freq"]][["compare_conditions_pretest"]] <- wilcox.test(sing_freq_dat[sing_freq_dat$condition == "SingFirst",]$`1`, 
+                                                                                  sing_freq_dat[sing_freq_dat$condition == "SingSecond",]$`1`, 
+                                                                                  paired = F)
 
 
-singing_analyses[["singing_freq"]][["compare_conditions_posttest"]] <- t.test(sing_freq_dat[sing_freq_dat$condition == "SingFirst",]$`6`, 
-                                                                              sing_freq_dat[sing_freq_dat$condition == "SingSecond",]$`6`, 
-                                                                              paired = F)
+singing_analyses[["singing_freq"]][["compare_conditions_posttest"]] <- wilcox.test(sing_freq_dat[sing_freq_dat$condition == "SingFirst",]$`6`, 
+                                                                                   sing_freq_dat[sing_freq_dat$condition == "SingSecond",]$`6`, 
+                                                                                   paired = F)
 
 
 sing_freq_dat_long <- dat %>% 
@@ -601,7 +875,7 @@ sing_freq_dat_long <- dat %>%
                             levels=c("SingSecond","SingFirst")))
 
 
-singing_analyses[["singing_freq"]][["autoregression "]] <- lme(dailySing ~ 1 + condition*daynumber,
+singing_analyses[["singing_freq"]][["autoregression"]] <- lme(dailySing ~ 1 + condition*daynumber,
                                                                random = ~1|miph_id,
                                                                correlation = corAR1(form = ~ daynumber|miph_id),
                                                                data = sing_freq_dat_long) %>% tidy(.,"fixed")
@@ -630,7 +904,7 @@ soothing_method_dat_long <- dat %>%
   mutate(across(starts_with("EMA_babyHowCalmDown."), ~./total)) %>% 
   ungroup() 
 
-soothing_method_dat <- soothing_method_dat_long%>% 
+soothing_method_dat <- soothing_method_dat_long %>% 
   group_by(condition, week) %>% 
   summarise(across(starts_with("EMA_babyHowCalmDown."), mean, na.rm = TRUE)) %>% 
   pivot_longer(cols = starts_with("EMA_babyHowCalmDown."), names_to = "method", values_to = "proportion") %>% 
@@ -676,23 +950,43 @@ soothing_plot2_data_weekly <- soothing_method_dat_long %>%
             n = n(),
             se = sd/sqrt(n)) 
   
+# for these paired tests, filter data to only include participants in manipulation group who provided data at both timepoints
 
+soothing_method_manipulation <- soothing_method_dat_long %>% 
+  filter(condition == "SingFirst" & soothing_method_dat_long$week %in% c(1,6)) %>% 
+  group_by(miph_id) %>%
+  filter(n_distinct(week) == 2) %>%  # Keep only IDs with data for both week 1 and week 6
+  ungroup()
 
-soothing_analyses[["singing_change"]][["manipulation"]] <- t.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
-                                                                  soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "1",]$`EMA_babyHowCalmDown.Sing`
-                                                                  ) %>%  tidy
+  
+soothing_analyses[["singing_change"]][["manipulation"]] <- wilcox.test(soothing_method_manipulation[soothing_method_manipulation$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
+                                                                       soothing_method_manipulation[soothing_method_manipulation$week == "1",]$`EMA_babyHowCalmDown.Sing`, 
+                                                                       paired =T) %>%  tidy
 
-soothing_analyses[["singing_change"]][["control"]] <- t.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingSecond" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
-                                                                  soothing_method_dat_long[soothing_method_dat_long$condition == "SingSecond" & soothing_method_dat_long$week == "1",]$`EMA_babyHowCalmDown.Sing`
+soothing_analyses[["singing_change"]][["manipulation_change"]] <- mean(soothing_method_manipulation[soothing_method_manipulation$week == "6",]$`EMA_babyHowCalmDown.Sing`) -  
+                                                                       mean(soothing_method_manipulation[soothing_method_manipulation$week == "1",]$`EMA_babyHowCalmDown.Sing`)
+
+soothing_method_control <- soothing_method_dat_long %>% 
+  filter(condition == "SingSecond" & soothing_method_dat_long$week %in% c(1,6)) %>% 
+  group_by(miph_id) %>%
+  filter(n_distinct(week) == 2) %>%  # Keep only IDs with data for both week 1 and week 6
+  ungroup()
+
+soothing_analyses[["singing_change"]][["control"]] <- wilcox.test(soothing_method_control[soothing_method_control$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
+                                                                  soothing_method_control[soothing_method_control$week == "1",]$`EMA_babyHowCalmDown.Sing`,
+                                                                  paired=T
                                                              ) %>%  tidy
 
-soothing_analyses[["singing_change"]][["compare_groups"]] <- t.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
+
+
+soothing_analyses[["singing_change"]][["compare_groups"]] <- wilcox.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
                                                                     soothing_method_dat_long[soothing_method_dat_long$condition == "SingSecond"  & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Sing`, 
                                                                     paired = F) %>% tidy
 
 
-soothing_analyses[["recorded_music_change"]][["compare_groups"]] <- t.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Play.recorded.music`, 
-                                                                          soothing_method_dat_long[soothing_method_dat_long$condition == "SingSecond" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Play.recorded.music`)
+soothing_analyses[["recorded_music_change"]][["compare_groups"]] <- wilcox.test(soothing_method_dat_long[soothing_method_dat_long$condition == "SingFirst" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Play.recorded.music`, 
+                                                                          soothing_method_dat_long[soothing_method_dat_long$condition == "SingSecond" & soothing_method_dat_long$week == "6",]$`EMA_babyHowCalmDown.Play.recorded.music`,
+                                                                          paired = F) %>% tidy
 
 
 ##### baby mood analyses ----
@@ -726,20 +1020,20 @@ baby_tests <- list()
 
 
 # across conditions: compare week 1 to week 6 
-baby_tests[["mood"]][["all_1_6"]] <- t.test(baby_mood_dat_wide$weeklyPos_scaled_6,
+baby_tests[["mood"]][["all_1_6"]] <- wilcox.test(baby_mood_dat_wide$weeklyPos_scaled_6,
                                                 baby_mood_dat_wide$weeklyPos_scaled_1,
                                                 alternative = "greater",
                                                 paired=T)
 
+baby_tests[["mood"]][["all_1_6_change"]] <- mean(baby_mood_dat_wide$weeklyPos_scaled_6, na.rm=T) - mean(baby_mood_dat_wide$weeklyPos_scaled_1, na.rm=T)
 
 # between condition: compare manipulation and control groups at pre-test/week 1 (nonsig)
-baby_tests[["mood"]][["compare_pretest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_1,
+baby_tests[["mood"]][["compare_pretest"]] <- wilcox.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_1,
                                                     baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_1)
 
 # between condition: compare manipulation and control groups at post-test/week 6 (sig)
-baby_tests[["mood"]][["compare_posttest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_6,
-                                                     baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_6,
-                                                     alternative = "greater")
+baby_tests[["mood"]][["compare_posttest"]] <- wilcox.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_6,
+                                                     baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_6)
 
 
 # calculate mean baby mood score for each week
@@ -805,12 +1099,11 @@ parent_mood_dat_wide <- parent_mood_dat %>%
 parent_tests <- list()
 
 
-parent_tests[["compare_baseline_mood_scaled"]] <-  t.test(parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_1,
+parent_tests[["compare_baseline_mood_scaled"]] <-  wilcox.test(parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_1,
                                                           parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_1)
 
-parent_tests[["compare_posttest_mood_scaled"]] <-  t.test(parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_6,
-                                                          parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_6,
-                                                          alternative = "greater")
+parent_tests[["compare_posttest_mood_scaled"]] <-  wilcox.test(parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingFirst", ]$weeklyPos_scaled_6,
+                                                          parent_mood_dat_wide[parent_mood_dat_wide$condition=="SingSecond", ]$weeklyPos_scaled_6)
 
 
 
@@ -936,23 +1229,16 @@ latency <- median(latency_data$latency)
 hifreq_latency <- median(latency_data[latency_data$week %in% c(1,6),]$latency)
 lowfreq_latency <- median(latency_data[!(latency_data$week %in% c(1,6)),]$latency)
 
+temp_data <- latency_data %>% group_by(miph_id, daynumber, current_age) %>% 
+  summarise(mean_latency = mean(latency)) %>% drop_na(mean_latency)
+
 latency_model <- lme(mean_latency ~ 1 + current_age,
                      random = ~1|miph_id,
                      correlation = corAR1(form = ~ daynumber|miph_id),
-                     data = latency_data %>% group_by(miph_id, daynumber, current_age) %>% 
-                       summarise(mean_latency = mean(latency))) %>% 
+                     data = temp_data) %>% 
   tidy(.,"fixed")
 
 #### replicate mood results in miph ----
-
-baby_tests[["mood"]][["miph"]][["compare_pretest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst" & baby_mood_dat_wide$cohort=="miph", ]$weeklyPos_scaled_1,
-                                                    baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond" & baby_mood_dat_wide$cohort=="miph", ]$weeklyPos_scaled_1)%>% tidy()
-
-# between condition: compare manipulation and control groups at post-test/week 6 (sig)
-baby_tests[["mood"]][["miph"]][["compare_posttest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst" & baby_mood_dat_wide$cohort=="miph", ]$weeklyPos_scaled_6,
-                                                     baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond" & baby_mood_dat_wide$cohort=="miph", ]$weeklyPos_scaled_6,
-                                                     alternative = "greater")%>% tidy()
-
 
 baby_tests[["mood"]][["miph"]][["autoregression"]] <- lme(mood ~ 1 + condition*daynumber,
     random = ~1|miph_id,
@@ -960,15 +1246,6 @@ baby_tests[["mood"]][["miph"]][["autoregression"]] <- lme(mood ~ 1 + condition*d
     data = mm_dat %>% filter(cohort == "miph")) %>% tidy(.,fixed=T)
 
 #### replicate mood results in kiwi ----
-
-
-baby_tests[["mood"]][["kiwi"]][["compare_pretest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst" & baby_mood_dat_wide$cohort=="kiwi", ]$weeklyPos_scaled_1,
-                                                              baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond" & baby_mood_dat_wide$cohort=="kiwi", ]$weeklyPos_scaled_1) %>% tidy()
-
-
-baby_tests[["mood"]][["kiwi"]][["compare_posttest"]] <- t.test(baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingFirst" & baby_mood_dat_wide$cohort=="kiwi", ]$weeklyPos_scaled_6,
-                                                               baby_mood_dat_wide[baby_mood_dat_wide$condition=="SingSecond" & baby_mood_dat_wide$cohort=="kiwi", ]$weeklyPos_scaled_6,
-                                                               alternative = "greater") %>% tidy()
 
 baby_tests[["mood"]][["kiwi"]][["autoregression"]] <- lme(mood ~ 1 + condition*daynumber,
     random = ~1|miph_id,
