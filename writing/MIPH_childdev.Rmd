@@ -103,6 +103,26 @@ themecolors = c('mediumpurple3','yellowgreen')
 
 \vspace{0.1in}
 
+\justifying
+\normalsize
+Eun Cho^1,$^{\wedge}$,$\ast$^ , Lidya Yurdum^1,2,$^{\wedge}$,$\ast$^, Ekanem Ebinne^1^, Courtney B. Hilton^3^, Estelle Lai^3^, Mila Bertolo^1,4,5^, Pip Brown^3^, Brooke Milosh^6^, Haran Sened^7^, Diana I. Tamir^7^, and Samuel A. Mehr^1,3,$\ast$^
+
+\small
+^1^Child Study Center, Yale University, New Haven, CT 06520, USA.  
+^2^Department of Psychology, University of Amsterdam, Amsterdam 1018WT, Netherlands.  
+^3^School of Psychology, University of Auckland, Auckland 1010, New Zealand.  
+^4^Centre for Research in Brain, Language and Music, McGill University, Montréal, QC H3G 2A8, Canada.  
+^5^Integrated Program in Neuroscience, McGill University, Montréal, QC H3A 1A1, Canada.  
+^6^Donald and Barbara Zucker School of Medicine at Hofstra/Northwell, Hempstead, NY 11549, USA.   
+^7^Department of Psychology, Princeton University, Princeton, NJ 08544, USA.
+
+$^{\wedge}$These authors contributed equally.
+
+\*Corresponding authors. E-mails:
+[eun.cho@yale.edu](mailto:eun.cho@yale.edu){.email},
+[lidya.yurdum\@yale.edu](mailto:lidya.yurdum@yale.edu){.email},
+[sam\@auckland.ac.nz](mailto:sam@auckland.ac.nz){.email}
+
 \bigskip
 
 ```{=tex}
@@ -310,7 +330,7 @@ p1 <- ggplot(data = weekly_prop,
         axis.title.x = element_blank())+
   labs(x ="Week", y = "Proportion responding 'Yes'") +
   guides(color=guide_legend(title="Group", 
-                            override.aes=list(shape = 19, size=8, alpha=1)))+ 
+                            override.aes=list(shape = 19, size=8, alpha=1, linetype = "blank")))+ 
   scale_x_continuous(breaks=c(1,2,3,4,5,6),
                      labels = c("", "","","","", ""),
                      name="Study Phase")+
@@ -353,7 +373,7 @@ p2 <- ggplot(data = weekly_freq,
   theme(legend.position="bottom",
         axis.title.x = element_blank())+
   guides(color=guide_legend(title="Group", 
-                            override.aes=list(shape = 19, size=8, alpha=1)))+ 
+                            override.aes=list(shape = 19, size=8, alpha=1, linetype = "blank")))+ 
   scale_x_continuous(breaks=c(1,2,3,4,5,6),
                      labels = c("", "","","","", ""),
                      name = "Study Phase")+
@@ -385,6 +405,8 @@ p2 <- ggplot(data = weekly_freq,
 
 combined <- p1 + p2 & theme(legend.position = "bottom") 
 combined + plot_layout(guides = "collect")
+
+ggsave(here("./viz", "figure2.png"), width = 8, height = 4.5)
 ```
 
 Notably, the absolute frequency of infant-directed singing was substantial in the manipulation group: by the last week of the intervention, the proportion of times a caregiver had recently sung to their infant when they received an EMA ping was `r singing_analyses$hourly_singing_check$SingFirst$mean[[5]] %>% r2` -- almost all of the time -- relative to `r singing_analyses$hourly_singing_check$SingSecond$mean[[5]] %>% r2` in the control group.
@@ -496,6 +518,7 @@ p2 <- ggplot(soothing_plot2_data, aes(x = factor(phase), y = mean, color = condi
 
 p1 + p2 
 
+ggsave(here("./viz", "figure3.png"), width = 8, height = 4.5)
 ```
 
 ## Music enrichment increases the use of singing specifically in the context of soothing infants
@@ -555,9 +578,9 @@ p1 <- ggplot(baby_mood_dat_plot, aes(x = week, y = weeklyPos_scaled, fill = cond
     legend.position = "right",
     text = element_text(size = 20),
     axis.text = element_text(size = 10),
-    axis.title = element_text(size = 15),
+    axis.title = element_text(size = 10),
     legend.text = element_text(size = 10),
-    legend.title = element_text(size = 15),
+    legend.title = element_text(size = 10),
     plot.background = element_rect(fill = "transparent", colour = "transparent"),
     panel.background = element_rect(fill = "transparent", colour = "transparent"),
     legend.background = element_rect(fill = "transparent", colour = "transparent")
@@ -597,11 +620,11 @@ p2 <- ggplot(parent_mood_dat_plot, aes(x = week, y = weeklyPos_scaled, fill = co
                              override.aes = list(shape = 19, size = 8, alpha = 1, color = themecolors))) +
   theme(
     legend.position = "right",
-    text = element_text(size = 20),
+    text = element_text(size = 15),
     axis.text = element_text(size = 10),
-    axis.title = element_text(size = 15),
+    axis.title = element_text(size = 10),
     legend.text = element_text(size = 10),
-    legend.title = element_text(size = 15),
+    legend.title = element_text(size = 10),
     plot.background = element_rect(fill = "transparent", colour = "transparent"),
     panel.background = element_rect(fill = "transparent", colour = "transparent"),
     legend.background = element_rect(fill = "transparent", colour = "transparent")
@@ -610,6 +633,8 @@ p2 <- ggplot(parent_mood_dat_plot, aes(x = week, y = weeklyPos_scaled, fill = co
 
 combined <- p1 + p2 & theme(legend.position = "bottom") 
 combined + plot_layout(guides = "collect")
+
+ggsave(here("./viz", "figure4.png"), width = 8, height = 4.5)
 ```
 
 
@@ -623,7 +648,7 @@ Infant mood and caregiver mood were moderately and positively correlated, howeve
 
 To further assess the degree of potential confounding between infant and caregiver mood reports, we tested whether each of the infant and caregiver mood self-reports correlated with other measures that should be expected to be more strongly linked to caregiver mood than infant mood. Two variables in the daily EMA surveys met this criterion: a measure of how socially connected caregivers felt (from "Very lonely" to "Very connected") and a measure of the perceived stress of caregiving ("How stressful have you found parenting in the last 2-3 hours?").
 
-The association of social connection and caregiver mood ($\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_adultHowPositive") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_adultHowPositive") %>% pull(p.value) %>% fp`) was both stronger and in the opposite direction of the association between social connection and infant mood ($\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(p.value) %>% fp`; interaction: $\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(estimate) %>% r3`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(p.value) %>% fp`; autoregressive time series model with untransformed mood data). Similarly, while both infant ($\beta$ = `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(p.value) %>% fp`) and caregiver mood ($\beta$ = `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_adultHowPositive") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_adultHowPositive") %>% pull(p.value) %>% fp`) predicted how stressful caregivers found parenting, the interaction between the two mood variables was statistically significant ($\beta$ = `r round((parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(estimate)),4) `, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(p.value) %>% fp`), indicating a significantly stronger relation between caregiver mood and parenting stress than between caregiver mood and infant mood. These results suggest that our measures of infant mood and caregiver mood tapped into substantively different phenomena, and were not fully confounded.
+The association of social connection and caregiver mood ($\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_adultHowPositive") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_adultHowPositive") %>% pull(p.value) %>% fp`) was both stronger and in the opposite direction of the association between social connection and infant mood ($\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(estimate) %>% r2`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(p.value) %>% fp`; interaction: $\beta$ = `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(estimate) %>% r3`, *p* `r parent_tests$baby_parent_social %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(p.value) %>% fp`; autoregressive time series model with untransformed mood data). Similarly, while both infant ($\beta$ = `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(estimate) %>% round(.,3)`, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative") %>% pull(p.value) %>% fp`) and caregiver mood ($\beta$ = `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_adultHowPositive") %>% pull(estimate) %>% round(.,3)`, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_adultHowPositive") %>% pull(p.value) %>% fp`) predicted how stressful caregivers found parenting, the interaction between the two mood variables was statistically significant ($\beta$ = `r round((parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(estimate)),4) `, *p* `r parent_tests$baby_parent_stressful %>% filter(term=="EMA_babyMoodPositiveNegative:EMA_adultHowPositive") %>% pull(p.value) %>% fp`), indicating a significantly stronger relation between caregiver mood and parenting stress than between caregiver mood and infant mood. These results suggest that our measures of infant mood and caregiver mood tapped into substantively different phenomena, and were not fully confounded.
 
 In sum, we found a causal effect of music enrichment on infant mood, but not caregiver mood, despite the two mood measures being correlated with one another. It is possible that increasing the frequency of infant-directed singing may improve *both* infants' and caregivers' moods, whether directly (e.g., singing makes caregivers feel positive) or indirectly (e.g., having a happier infant makes caregivers feel positive). If so, putative effects on caregiver mood are small enough that they could not be reliably detected in this brief intervention study.
 
