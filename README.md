@@ -30,6 +30,8 @@ Analysis results are in `/results`.
 
 Images used for non-dynamic visualisations are in `/viz`.
 
+[![DOI](https://zenodo.org/badge/787304983.svg)](https://doi.org/10.5281/zenodo.15181606)
+
 ### Materials
 
 Intervention materials (i.e., video karaoke files provided to parents to aid in the singing intervention) are in `/materials`.
