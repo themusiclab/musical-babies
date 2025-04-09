@@ -1,4 +1,4 @@
-# Musical Babies // Ecological momentary assessment reveals causal effects of music enrichment on infant mood
+# Ecological momentary assessment reveals causal effects of music enrichment on infant mood
 
 This repo contains all files necessary for reproducing the article "Ecological momentary assessment reveals causal effects of music enrichment on infant mood".
 
