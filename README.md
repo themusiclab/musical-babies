@@ -2,9 +2,6 @@
 
 This repo contains all files necessary for reproducing the article "Ecological momentary assessment reveals causal effects of music enrichment on infant mood".
 
-> [!Warning]
-> **This repository is currently under construction and is not yet complete. It'll be populated soon and we will remove this warning once sorted.**
-
 ## Description
 
 You can find the following here:
